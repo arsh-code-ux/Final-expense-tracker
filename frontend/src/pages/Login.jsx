@@ -74,7 +74,7 @@ export default function Login(){
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center relative overflow-hidden bg-gradient-to-br from-primary-50 via-secondary-50 to-accent-50 p-4">
+    <div className="app-page flex items-center justify-center relative overflow-hidden p-4">
       {/* Animated background decorations */}
       <div className="absolute inset-0 overflow-hidden">
         <div className="absolute -top-40 -left-40 w-96 h-96 bg-primary-400 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse"></div>
@@ -91,11 +91,11 @@ export default function Login(){
       <div className="max-w-5xl w-full grid lg:grid-cols-2 gap-8 relative z-10">
         {/* Left Side - Branding */}
         <div className="hidden lg:flex flex-col justify-center items-start space-y-8 p-8 animate-fade-in">
-          <div className="inline-flex items-center justify-center w-24 h-24 bg-gradient-to-br from-primary-500 via-secondary-600 to-accent-600 rounded-3xl shadow-2xl mb-4 animate-scale-in transform hover:scale-110 transition-transform duration-300">
+          <div className="inline-flex items-center justify-center w-24 h-24 bg-[#143b2d] rounded-3xl shadow-xl mb-4 animate-scale-in transform hover:scale-105 transition-transform duration-300">
             <span className="text-5xl animate-bounce-subtle">💰</span>
           </div>
           <div className="space-y-4">
-            <h1 className="text-6xl font-extrabold bg-gradient-to-r from-primary-600 via-secondary-600 to-accent-600 bg-clip-text text-transparent leading-tight animate-slide-in-left">
+            <h1 className="app-display-heading text-6xl text-[#143b2d] leading-tight animate-slide-in-left">
               Track Expense
             </h1>
             <p className="text-2xl text-neutral-700 font-medium animate-slide-in-left delay-100">
@@ -136,14 +136,14 @@ export default function Login(){
               <p className="text-neutral-600 text-lg">Smart financial management</p>
             </div>
 
-            <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-2xl p-8 md:p-10 border-2 border-white/50 animate-scale-in">
+            <div className="app-surface rounded-3xl p-8 md:p-10 animate-scale-in">
               {/* Tab Switcher */}
               <div className="flex mb-8 bg-gradient-to-r from-primary-50 via-secondary-50 to-accent-50 rounded-2xl p-2">
                 <button
                   onClick={() => { setIsLogin(true); setError(''); setSuccess('') }}
                   className={`flex-1 py-3.5 px-6 rounded-xl font-bold transition-all duration-300 ${
                     isLogin 
-                      ? 'bg-gradient-to-r from-primary-600 via-secondary-600 to-accent-600 text-white shadow-lg transform scale-105' 
+                      ? 'bg-[#143b2d] text-white shadow-lg transform scale-105' 
                       : 'text-neutral-600 hover:bg-white/50'
                   }`}
                 >
@@ -153,7 +153,7 @@ export default function Login(){
                   onClick={() => { setIsLogin(false); setError(''); setSuccess('') }}
                   className={`flex-1 py-3.5 px-6 rounded-xl font-bold transition-all duration-300 ${
                     !isLogin 
-                      ? 'bg-gradient-to-r from-primary-600 via-secondary-600 to-accent-600 text-white shadow-lg transform scale-105' 
+                      ? 'bg-[#143b2d] text-white shadow-lg transform scale-105' 
                       : 'text-neutral-600 hover:bg-white/50'
                   }`}
                 >
@@ -257,7 +257,7 @@ export default function Login(){
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full bg-gradient-to-r from-primary-600 via-secondary-600 to-accent-600 hover:from-primary-700 hover:via-secondary-700 hover:to-accent-700 text-white font-bold py-4 px-8 rounded-xl transition-all duration-300 shadow-lg hover:shadow-2xl transform hover:-translate-y-1 active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                  className="w-full bg-[#143b2d] hover:bg-[#20533d] text-white font-bold py-4 px-8 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-1 active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
                 >
                   {loading ? (
                     <div className="flex items-center justify-center">

@@ -38,21 +38,6 @@ export default function TransactionList({ transactions, onTransactionUpdated, sh
     }
   }
 
-  const getCategoryIcon = (category) => {
-    const icons = {
-      'Food': '🍽️',
-      'Transportation': '🚗',
-      'Entertainment': '🎬',
-      'Shopping': '🛍️',
-      'Bills': '📄',
-      'Healthcare': '⚕️',
-      'Education': '📚',
-      'Travel': '✈️',
-      'Other': '📝'
-    }
-    return icons[category] || '💰'
-  }
-
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       day: 'numeric',
@@ -66,10 +51,7 @@ export default function TransactionList({ transactions, onTransactionUpdated, sh
   return (
     <div className="bg-white rounded-2xl shadow-xl border border-neutral-100 hover:shadow-2xl transition-all">
       <div className="px-4 sm:px-6 py-5 border-b border-neutral-200 bg-gradient-to-r from-primary-50 to-neutral-50 rounded-t-2xl">
-        <h3 className="text-xl sm:text-2xl font-bold text-navy flex items-center">
-          <span className="bg-primary-100 p-2 rounded-lg mr-3">📊</span>
-          {showLimited ? 'Recent Transactions' : 'All Transactions'}
-        </h3>
+        <h3 className="text-xl sm:text-2xl font-bold text-navy">{showLimited ? 'Recent Transactions' : 'All Transactions'}</h3>
         <p className="text-sm text-primary-700 mt-1 font-medium">
           {showLimited ? 'Your latest financial activities' : `Total: ${transactions.length} transactions`}
         </p>
@@ -79,7 +61,6 @@ export default function TransactionList({ transactions, onTransactionUpdated, sh
         {displayTransactions.length === 0 ? (
           <div className="px-4 sm:px-6 py-12 text-center">
             <div className="bg-neutral-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4">
-              <span className="text-4xl">💳</span>
             </div>
             <p className="text-neutral-500 font-medium">No transactions yet. Add your first transaction!</p>
           </div>
@@ -93,7 +74,7 @@ export default function TransactionList({ transactions, onTransactionUpdated, sh
                   <div className={`text-2xl sm:text-3xl flex-shrink-0 p-3 rounded-xl ${
                     tx.type === 'income' ? 'bg-success-100' : 'bg-danger-100'
                   }`}>
-                    {getCategoryIcon(tx.category)}
+                    <span className="text-sm font-semibold">{tx.type === 'income' ? 'IN' : 'EX'}</span>
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-2">
@@ -103,14 +84,14 @@ export default function TransactionList({ transactions, onTransactionUpdated, sh
                           ? 'bg-gradient-to-r from-success-100 to-success-200 text-success-800' 
                           : 'bg-gradient-to-r from-danger-100 to-danger-200 text-danger-800'
                       }`}>
-                        {tx.type === 'income' ? '↗️ Income' : '↘️ Expense'}
+                        {tx.type === 'income' ? 'Income' : 'Expense'}
                       </span>
                     </div>
                     {tx.notes && (
                       <p className="text-sm text-neutral-600 mt-1.5 break-words">{tx.notes}</p>
                     )}
                     <p className="text-xs text-neutral-500 mt-1.5 font-medium">
-                      📅 {formatDate(tx.date)}
+                      {formatDate(tx.date)}
                     </p>
                   </div>
                 </div>

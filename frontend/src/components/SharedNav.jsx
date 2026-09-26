@@ -24,63 +24,55 @@ export default function SharedNav() {
   const isDashboard = location.pathname === '/dashboard'
 
   return (
-    <nav 
-      className={`fixed w-full z-50 transition-all duration-300 ${
-        scrollY > 50 || !isLandingPage
-          ? 'bg-white/95 backdrop-blur-xl shadow-2xl border-b-4 border-primary-300' 
-          : 'bg-white/95 backdrop-blur-xl shadow-2xl border-b-4 border-primary-300'
+    <nav
+      className={`fixed z-50 w-full border-b border-[#e1d7c7] bg-[#f7f2ea]/90 backdrop-blur-xl transition-all duration-300 ${
+        scrollY > 20 || !isLandingPage ? 'shadow-[0_12px_28px_rgba(75,80,68,0.08)]' : 'shadow-none'
       }`}
     >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-28">
-          {/* Logo */}
-          <Link to={isAuthenticated ? "/dashboard" : "/"} className="flex items-center space-x-4 group">
-            <div className="bg-gradient-to-br from-primary-500 via-secondary-500 to-accent-500 p-4 rounded-2xl shadow-2xl group-hover:shadow-[0_0_30px_rgba(99,102,241,0.6)] transition-all transform group-hover:scale-110 group-hover:rotate-6 animate-pulse-glow">
-              <span className="text-5xl">💰</span>
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="flex h-24 items-center justify-between">
+          <Link to={isAuthenticated ? '/dashboard' : '/'} className="flex items-center gap-3 group">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-[#9cae85] via-[#d7c3a0] to-[#f1e9dc] shadow-[0_10px_24px_rgba(112,126,96,0.25)] transition-transform duration-200 group-hover:scale-105">
             </div>
-            <span className="text-4xl sm:text-5xl font-black bg-gradient-to-r from-primary-600 via-secondary-600 to-accent-600 bg-clip-text text-transparent drop-shadow-lg animate-gradient-shift mr-8">
-              TrackExpense
-            </span>
+            <span className="text-2xl font-black tracking-tight text-[#273126] sm:text-3xl">TrackExpense</span>
           </Link>
 
-          {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-6 lg:space-x-10">
+          <div className="hidden items-center gap-7 md:flex">
             {!isAuthenticated ? (
               <>
-                <a href="/#features" className="text-neutral-800 dark:text-neutral-200 text-xl lg:text-2xl font-black hover:text-primary-600 dark:hover:text-primary-400 transition-all transform hover:scale-110 hover:drop-shadow-lg">Features</a>
-                <a href="/#pricing" className="text-neutral-800 dark:text-neutral-200 text-xl lg:text-2xl font-black hover:text-secondary-600 dark:hover:text-secondary-400 transition-all transform hover:scale-110 hover:drop-shadow-lg">Pricing</a>
-                <a href="/#how-it-works" className="text-neutral-800 dark:text-neutral-200 text-xl lg:text-2xl font-black hover:text-accent-600 dark:hover:text-accent-400 transition-all transform hover:scale-110 hover:drop-shadow-lg">How It Works</a>
-                <a href="/#faq" className="text-neutral-800 dark:text-neutral-200 text-xl lg:text-2xl font-black hover:text-primary-700 dark:hover:text-primary-300 transition-all transform hover:scale-110 hover:drop-shadow-lg">FAQ</a>
-                <Link 
-                  to="/login" 
-                  className="bg-gradient-to-r from-primary-600 via-secondary-600 to-accent-600 hover:from-primary-700 hover:via-secondary-700 hover:to-accent-700 text-white px-8 py-4 rounded-2xl text-xl font-black shadow-2xl hover:shadow-[0_0_30px_rgba(99,102,241,0.6)] transition-all transform hover:-translate-y-1 hover:scale-105"
+                <a href="/#features" className="text-base font-semibold text-[#324235] transition-colors hover:text-[#5f6d51]">Features</a>
+                <a href="/#pricing" className="text-base font-semibold text-[#324235] transition-colors hover:text-[#5f6d51]">Pricing</a>
+                <a href="/#how-it-works" className="text-base font-semibold text-[#324235] transition-colors hover:text-[#5f6d51]">How it works</a>
+                <a href="/#faq" className="text-base font-semibold text-[#324235] transition-colors hover:text-[#5f6d51]">FAQ</a>
+                <Link
+                  to="/login"
+                  className="rounded-2xl bg-[#6f7e5f] px-6 py-3 text-base font-bold text-white shadow-[0_12px_25px_rgba(111,126,95,0.22)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#596a4b]"
                 >
-                  Get Started Free →
+                  Get started
                 </Link>
               </>
             ) : (
               <>
-                <Link 
-                  to="/dashboard" 
-                  className={`font-black text-2xl transition-all transform hover:scale-110 ${
-                    isDashboard 
-                      ? 'text-primary-600 dark:text-primary-400 drop-shadow-lg' 
-                      : 'text-neutral-800 dark:text-neutral-200 hover:text-primary-600 dark:hover:text-primary-400'
+                <Link
+                  to="/dashboard"
+                  className={`text-base font-bold transition-colors ${
+                    isDashboard ? 'text-[#53644d]' : 'text-[#2f342d] hover:text-[#53644d]'
                   }`}
                 >
                   Dashboard
                 </Link>
-                <div className="flex items-center space-x-5">
+
+                <div className="flex items-center gap-4">
                   <div className="text-right">
-                    <div className="text-lg font-black bg-gradient-to-r from-primary-600 to-secondary-600 bg-clip-text text-transparent">{user?.name || 'User'}</div>
-                    <div className="text-sm font-bold text-neutral-600 dark:text-neutral-400">{user?.email}</div>
+                    <div className="text-sm font-bold text-[#2f342d]">{user?.name || 'User'}</div>
+                    <div className="text-xs text-[#68736a]">{user?.email}</div>
                   </div>
-                  <div className="w-14 h-14 bg-gradient-to-br from-primary-500 via-secondary-500 to-accent-500 rounded-full flex items-center justify-center text-white text-xl font-black shadow-2xl transform hover:scale-125 transition-transform animate-pulse-glow">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-[#9cae85] via-[#d7c3a0] to-[#f1e9dc] text-sm font-black text-[#273126]">
                     {user?.name?.[0]?.toUpperCase() || 'U'}
                   </div>
                   <button
                     onClick={handleLogout}
-                    className="bg-gradient-to-r from-danger-600 to-danger-700 hover:from-danger-700 hover:to-danger-800 text-white px-8 py-3.5 rounded-2xl text-lg font-black transition-all shadow-2xl hover:shadow-[0_0_30px_rgba(244,63,94,0.6)] transform hover:-translate-y-1"
+                    className="rounded-2xl bg-[#c26464] px-5 py-3 text-sm font-bold text-white transition-all duration-200 hover:bg-[#ad5353]"
                   >
                     Logout
                   </button>
@@ -89,12 +81,12 @@ export default function SharedNav() {
             )}
           </div>
 
-          {/* Mobile Menu Button */}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="md:hidden p-2 rounded-lg text-darkblue-700 hover:bg-primary-50 transition-colors"
+            className="rounded-xl p-2 text-[#2f342d] transition-colors hover:bg-[#efe6db] md:hidden"
+            aria-label="Toggle menu"
           >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               {mobileMenuOpen ? (
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               ) : (
@@ -104,40 +96,24 @@ export default function SharedNav() {
           </button>
         </div>
 
-        {/* Mobile Menu */}
         {mobileMenuOpen && (
-          <div className="md:hidden py-4 border-t border-primary-200 bg-white/95 backdrop-blur-lg animate-slide-down">
+          <div className="border-t border-[#e8dfd4] bg-[#f9f4ee] py-4 md:hidden">
             {!isAuthenticated ? (
-              <div className="flex flex-col space-y-4">
-                <a href="/#features" className="text-darkblue-700 hover:text-primary-600 font-medium px-4 py-2 rounded-lg hover:bg-primary-50 transition-colors">Features</a>
-                <a href="/#pricing" className="text-darkblue-700 hover:text-primary-600 font-medium px-4 py-2 rounded-lg hover:bg-primary-50 transition-colors">Pricing</a>
-                <a href="/#how-it-works" className="text-darkblue-700 hover:text-primary-600 font-medium px-4 py-2 rounded-lg hover:bg-primary-50 transition-colors">How It Works</a>
-                <a href="/#faq" className="text-darkblue-700 hover:text-primary-600 font-medium px-4 py-2 rounded-lg hover:bg-primary-50 transition-colors">FAQ</a>
-                <Link 
-                  to="/login" 
-                  className="btn-darkblue text-center"
-                >
-                  Get Started Free
-                </Link>
+              <div className="flex flex-col gap-2">
+                <a href="/#features" className="rounded-xl px-3 py-2 text-base font-semibold text-[#324235] hover:bg-[#f0e7dc]">Features</a>
+                <a href="/#pricing" className="rounded-xl px-3 py-2 text-base font-semibold text-[#324235] hover:bg-[#f0e7dc]">Pricing</a>
+                <a href="/#how-it-works" className="rounded-xl px-3 py-2 text-base font-semibold text-[#324235] hover:bg-[#f0e7dc]">How it works</a>
+                <a href="/#faq" className="rounded-xl px-3 py-2 text-base font-semibold text-[#324235] hover:bg-[#f0e7dc]">FAQ</a>
+                <Link to="/login" className="mt-2 rounded-2xl bg-[#6f7e5f] px-4 py-3 text-center text-base font-bold text-white">Get started</Link>
               </div>
             ) : (
-              <div className="flex flex-col space-y-4">
-                <Link 
-                  to="/dashboard" 
-                  className="text-darkblue-700 hover:text-primary-600 font-medium px-4 py-2 rounded-lg hover:bg-primary-50 transition-colors"
-                >
-                  Dashboard
-                </Link>
-                <div className="px-4 py-3 bg-primary-50 rounded-lg">
-                  <div className="font-bold text-darkblue-900">{user?.name || 'User'}</div>
-                  <div className="text-sm text-darkblue-600">{user?.email}</div>
+              <div className="flex flex-col gap-2">
+                <Link to="/dashboard" className="rounded-xl px-3 py-2 text-base font-semibold text-[#324235] hover:bg-[#f0e7dc]">Dashboard</Link>
+                <div className="rounded-2xl bg-[#edf2e7] px-3 py-3">
+                  <div className="text-sm font-bold text-[#2f342d]">{user?.name || 'User'}</div>
+                  <div className="text-xs text-[#68736a]">{user?.email}</div>
                 </div>
-                <button
-                  onClick={handleLogout}
-                  className="bg-gradient-to-r from-danger-600 to-danger-700 text-white px-6 py-3 rounded-xl font-bold shadow-lg text-center hover:from-danger-700 hover:to-danger-800 transition-all"
-                >
-                  Logout
-                </button>
+                <button onClick={handleLogout} className="rounded-2xl bg-[#c26464] px-4 py-3 text-base font-bold text-white">Logout</button>
               </div>
             )}
           </div>

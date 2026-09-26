@@ -1,10 +1,12 @@
 import React, { useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { useDataSync } from '../contexts/DataSyncContext'
+import { getApiUrl } from '../utils/apiConfig'
 
 export default function AlertsList({ alerts, onAlertsUpdated }) {
   const { getToken } = useAuth()
   const { syncTrigger, refreshData } = useDataSync()
+  const API_BASE = getApiUrl()
 
   console.log('=== ALERTSLIST RENDER ===')
   console.log('Alerts prop:', alerts)
@@ -24,37 +26,6 @@ export default function AlertsList({ alerts, onAlertsUpdated }) {
       }
     }
   }, [syncTrigger]) // Remove functions from dependencies to prevent infinite loops
-
-  const getAlertIcon = (type) => {
-    switch (type) {
-      case 'budget_exceeded':
-        return '🚨'
-      case 'budget_warning':
-        return '⚠️'
-      case 'low_balance':
-        return '💸'
-      case 'negative_balance':
-        return '🔴'
-      case 'no_savings':
-        return '💔'
-      case 'low_savings_rate':
-        return '📉'
-      case 'expense_trend':
-        return '📈'
-      case 'no_budget':
-        return '💡'
-      case 'no_savings_goals':
-        return '🎯'
-      case 'goal_achieved':
-        return '🎉'
-      case 'goal_milestone':
-        return '🎯'
-      case 'recurring_due':
-        return '📅'
-      default:
-        return 'ℹ️'
-    }
-  }
 
   const getAlertColor = (type) => {
     switch (type) {
@@ -184,7 +155,6 @@ export default function AlertsList({ alerts, onAlertsUpdated }) {
               >
                 <div className="flex items-start justify-between">
                   <div className="flex items-start space-x-2 sm:space-x-3 flex-1 min-w-0">
-                    <span className="text-xl sm:text-2xl flex-shrink-0">{getAlertIcon(alert.type)}</span>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium break-words">{alert.message}</p>
                       <p className="text-xs mt-1 opacity-75">
@@ -227,7 +197,6 @@ export default function AlertsList({ alerts, onAlertsUpdated }) {
               >
                 <div className="flex items-start justify-between">
                   <div className="flex items-start space-x-2 sm:space-x-3 flex-1 min-w-0">
-                    <span className="text-base sm:text-lg opacity-50 flex-shrink-0">{getAlertIcon(alert.type)}</span>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm text-gray-700 dark:text-gray-200 break-words">{alert.message}</p>
                       <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">

@@ -39,10 +39,10 @@ export default function AlertsPanel({ alerts, onAlertsUpdated }) {
         clearTimeout(timeoutId)
 
         if (response.ok) {
+          const data = await response.json()
           console.log('✅ Alerts generated successfully')
           setHasTriedAutoGenerate(true)
-          // Refresh the alerts data
-          onAlertsUpdated && onAlertsUpdated()
+          onAlertsUpdated && onAlertsUpdated(Array.isArray(data.alerts) ? data.alerts : null)
         } else {
           console.log('❌ Failed to generate alerts, status:', response.status)
           if (response.status === 401) {
@@ -100,10 +100,11 @@ export default function AlertsPanel({ alerts, onAlertsUpdated }) {
       console.log('📡 AlertsPanel Debug: Response received, status:', response.status)
 
       if (response.ok) {
+        const data = await response.json()
         console.log('✅ Alerts refreshed successfully')
         setError(null)
         setHasTriedAutoGenerate(false) // Reset to allow future auto-generation
-        onAlertsUpdated && onAlertsUpdated()
+        onAlertsUpdated && onAlertsUpdated(Array.isArray(data.alerts) ? data.alerts : null)
       } else {
         console.log('❌ Manual refresh failed, status:', response.status)
         let errorMessage
@@ -160,7 +161,7 @@ export default function AlertsPanel({ alerts, onAlertsUpdated }) {
                 </>
               ) : (
                 <>
-                  🔄 Refresh Alerts
+                  Refresh Alerts
                 </>
               )}
             </button>

@@ -14,7 +14,7 @@ import AnimatedCounter, { useIntersectionObserver } from '../components/Animated
 import NetworkErrorFallback from '../components/NetworkErrorFallback'
 
 // Import charts normally to fix loading issues
-import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts'
+import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, AreaChart, Area } from 'recharts'
 
 export default function Dashboard() {
   const { isAuthenticated, user, getToken } = useAuth()
@@ -78,12 +78,14 @@ export default function Dashboard() {
   const [budgets, setBudgets] = useState([])
   const [savings, setSavings] = useState([])
   const [alerts, setAlerts] = useState([])
+  const [collaboration, setCollaboration] = useState({ projects: [], summary: [], recent: [], notes: [], files: [], counts: [] })
   const [loading, setLoading] = useState(false) // Start with false for demo data
   const [error, setError] = useState(null)
   const [isRetrying, setIsRetrying] = useState(false)
   const [activeTab, setActiveTab] = useState('overview')
   const [showBudgetModal, setShowBudgetModal] = useState(false)
   const [showSavingsModal, setShowSavingsModal] = useState(false)
+  const [calendarMonth, setCalendarMonth] = useState(new Date())
   
   const API_BASE = getApiUrl()
   
@@ -165,11 +167,12 @@ export default function Dashboard() {
       const timeoutId = setTimeout(() => controller.abort(), 30000) // 30 second timeout
 
       // Fetch all data in parallel
-      const [transactionsRes, budgetsRes, savingsRes, alertsRes] = await Promise.all([
+      const [transactionsRes, budgetsRes, savingsRes, alertsRes, collaborationRes] = await Promise.all([
         fetch(`${API_BASE}/api/transactions`, { headers, signal: controller.signal }).catch(() => null),
         fetch(`${API_BASE}/api/budgets`, { headers, signal: controller.signal }).catch(() => null),
         fetch(`${API_BASE}/api/savings-goals`, { headers, signal: controller.signal }).catch(() => null),
-        fetch(`${API_BASE}/api/alerts`, { headers, signal: controller.signal }).catch(() => null)
+        fetch(`${API_BASE}/api/alerts`, { headers, signal: controller.signal }).catch(() => null),
+        fetch(`${API_BASE}/api/analytics/contributions/overview`, { headers, signal: controller.signal }).catch(() => null)
       ])
 
       clearTimeout(timeoutId)
@@ -207,6 +210,10 @@ export default function Dashboard() {
       } else {
         // If alerts fail specifically, it's not critical - set empty array
         setAlerts([])
+      }
+
+      if (collaborationRes?.ok) {
+        setCollaboration(await collaborationRes.json())
       }
 
     } catch (error) {
@@ -253,8 +260,49 @@ export default function Dashboard() {
 
   const getCategoryData = () => chartData.categoryData
   const getMonthlyData = () => chartData.monthlyData
+  const collaborationChartData = collaboration.summary.map((item) => ({
+    name: item._id.replace(':', ' '),
+    count: item.count
+  }))
+  const recentActivity = collaboration.recent.map((item) => ({
+    date: new Date(item.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
+    activity: item.type.replace(':', ' '),
+    project: item.project?.name || 'Project'
+  }))
+  const collaborationTotals = collaboration.counts.reduce((totals, item) => ({
+    notes: totals.notes + item.notes,
+    files: totals.files + item.files,
+    members: totals.members + item.members
+  }), { notes: 0, files: 0, members: 0 })
+  const getFileUrl = (url) => url?.startsWith('http') ? url : `${API_BASE}${url || ''}`
+  const calendarDays = React.useMemo(() => {
+    const today = new Date()
+    const year = calendarMonth.getFullYear()
+    const month = calendarMonth.getMonth()
+    const firstDay = new Date(year, month, 1).getDay()
+    const totalDays = new Date(year, month + 1, 0).getDate()
+    const activeDays = new Set(transactions.map((transaction) => new Date(transaction.date).toDateString()))
+    return Array.from({ length: firstDay + totalDays }, (_, index) => {
+      if (index < firstDay) return null
+      const day = index - firstDay + 1
+      const date = new Date(year, month, day)
+      return { day, isToday: date.toDateString() === today.toDateString(), hasActivity: activeDays.has(date.toDateString()) }
+    })
+  }, [transactions, calendarMonth])
 
-  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D']
+  const shiftCalendarMonth = (offset) => {
+    setCalendarMonth((current) => new Date(current.getFullYear(), current.getMonth() + offset, 1))
+  }
+
+  const tabSummary = {
+    overview: ['Overview', 'Your financial health and project pulse', `${transactions.length} transactions`],
+    transactions: ['Transactions', 'Review, add, and remove every money movement', `${transactions.length} records`],
+    budgets: ['Budgets', 'Keep planned spending visible and actionable', `${budgets.length} active budgets`],
+    savings: ['Savings', 'Turn small deposits into meaningful goals', `${savings.length} goals`],
+    alerts: ['Alerts', 'Personalized signals from your financial activity', `${alerts.length} alerts`]
+  }[activeTab]
+
+  const COLORS = ['#143b2d', '#4f7d5b', '#e7a761', '#a5523b', '#718064', '#b7c9a8']
 
   // Show error fallback if there's a critical error
   if (error && !loading && isAuthenticated) {
@@ -285,23 +333,27 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-900 dark:via-blue-900 dark:to-purple-900">
+    <div className="app-page">
       <div className="max-w-7xl mx-auto px-4 py-8">
         {/* Clean Header */}
         <div className="mb-8">
-          <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-xl rounded-2xl shadow-xl border border-white/20 dark:border-gray-700/50 p-6">
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent mb-2">
-              {isAuthenticated ? `💰 Welcome back, ${user?.name || 'User'}!` : '💰 Expense Tracker Dashboard'}
+          <div className="app-page-header">
+            <div>
+            <p className="app-eyebrow">PERSONAL FINANCE / OVERVIEW</p>
+            <h1 className="app-display-heading text-4xl text-slate-900 mb-2">
+              {isAuthenticated ? `Welcome back, ${user?.name || 'User'}!` : 'Expense Tracker Dashboard'}
             </h1>
             <p className="text-gray-600 dark:text-gray-300">
               {isAuthenticated ? 'Here\'s your financial overview' : 'Demo mode - Track your expenses'}
             </p>
+            </div>
+            <div className="app-date-chip">{new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}</div>
           </div>
         </div>
 
         {/* Clean Tab Navigation */}
         <div className="mb-8">
-          <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-xl rounded-2xl shadow-xl border border-white/20 dark:border-gray-700/50 p-1">
+          <div className="app-tabs">
             <nav className="flex space-x-1 overflow-x-auto">
               {tabs.map(tab => (
                 <button
@@ -310,17 +362,10 @@ export default function Dashboard() {
                   data-tab={tab}
                   className={`px-6 py-3 rounded-xl font-medium text-sm capitalize transition-all duration-200 whitespace-nowrap flex items-center space-x-2 ${
                     activeTab === tab
-                      ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg transform scale-105'
-                      : 'text-gray-600 dark:text-gray-300 hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 dark:hover:from-gray-700 dark:hover:to-gray-600 hover:text-gray-900 dark:hover:text-gray-200'
+                      ? 'app-tab-active'
+                      : 'text-gray-600 dark:text-gray-300 hover:bg-white hover:text-gray-900 dark:hover:text-gray-200'
                   }`}
                 >
-                  <span className="text-lg">
-                    {tab === 'overview' && '📊'}
-                    {tab === 'transactions' && '💳'}
-                    {tab === 'budget' && '💰'}
-                    {tab === 'savings goals' && '🎯'}
-                    {tab === 'ai assistant' && '🤖'}
-                  </span>
                   <span>{tab}</span>
                 </button>
               ))}
@@ -328,17 +373,19 @@ export default function Dashboard() {
           </div>
         </div>
 
-      {/* Overview Tab */}
+      <div className="app-tab-context">
+        <div><p className="app-eyebrow">NEST / {activeTab.toUpperCase()}</p><h2 className="app-display-heading text-2xl text-gray-900">{tabSummary[0]}</h2><p className="text-sm text-gray-500">{tabSummary[1]}</p></div>
+        <span className="app-context-count">{tabSummary[2]}</span>
+      </div>
+
+        {/* Overview Tab */}
       {activeTab === 'overview' && (
         <>
           {/* Summary Cards */}
           <div ref={statsRef} className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <div className="bg-gradient-to-br from-emerald-500 to-green-600 p-6 rounded-2xl shadow-xl text-white">
+            <div className="app-stat-card app-stat-green">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center">
-                  <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center mr-3">
-                    <span className="text-white text-xl">💰</span>
-                  </div>
                   <h3 className="text-sm font-medium text-green-100">Total Income</h3>
                 </div>
               </div>
@@ -353,12 +400,9 @@ export default function Dashboard() {
               <p className="text-sm text-green-100 mt-1">This month</p>
             </div>
             
-            <div className="bg-gradient-to-br from-orange-500 to-red-600 p-6 rounded-2xl shadow-xl text-white">
+            <div className="app-stat-card app-stat-peach">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center">
-                  <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center mr-3">
-                    <span className="text-white text-xl">💸</span>
-                  </div>
                   <h3 className="text-sm font-medium text-orange-100">Total Expenses</h3>
                 </div>
               </div>
@@ -373,14 +417,9 @@ export default function Dashboard() {
               <p className="text-sm text-orange-100 mt-1">This month</p>
             </div>
             
-            <div className={`p-6 rounded-2xl shadow-xl text-white ${balance >= 0 ? 'bg-gradient-to-br from-blue-500 to-cyan-600' : 'bg-gradient-to-br from-orange-500 to-red-600'}`}>
+            <div className={`app-stat-card ${balance >= 0 ? 'app-stat-forest' : 'app-stat-peach'}`}>
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center">
-                  <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center mr-3">
-                    <span className="text-white text-xl">
-                      {balance >= 0 ? '📈' : '📉'}
-                    </span>
-                  </div>
                   <h3 className={`text-sm font-medium ${balance >= 0 ? 'text-blue-100' : 'text-orange-100'}`}>Net Balance</h3>
                 </div>
               </div>
@@ -425,7 +464,6 @@ export default function Dashboard() {
                 </ResponsiveContainer>
               ) : (
                 <div className="text-center py-12">
-                  <div className="text-6xl mb-4">📊</div>
                   <p className="text-gray-500 dark:text-gray-400">No expense data available</p>
                   <p className="text-sm text-gray-400 dark:text-gray-500 mt-2">Add some transactions to see your spending breakdown</p>
                 </div>
@@ -434,22 +472,21 @@ export default function Dashboard() {
 
             {/* Monthly Income vs Expenses Bar Chart */}
             <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-xl p-6 rounded-2xl shadow-xl border border-white/20 dark:border-gray-700/50">
-              <h3 className="text-lg font-semibold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-6">Monthly Overview</h3>
+              <h3 className="text-lg font-semibold text-[#143b2d] dark:text-[#dcebd8] mb-6">Monthly Overview</h3>
               {getMonthlyData().length > 0 ? (
                 <ResponsiveContainer width="100%" height={300}>
                   <BarChart data={getMonthlyData()}>
-                    <CartesianGrid strokeDasharray="3 3" />
+                    <CartesianGrid stroke="#dedfd4" strokeDasharray="3 3" />
                     <XAxis dataKey="month" />
                     <YAxis />
                     <Tooltip formatter={(value) => formatAmount(value)} />
                     <Legend />
-                    <Bar dataKey="income" fill="#10B981" radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="expenses" fill="#EF4444" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="income" fill="#4f7d5b" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="expenses" fill="#a5523b" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               ) : (
                 <div className="text-center py-12">
-                  <div className="text-6xl mb-4">📈</div>
                   <p className="text-gray-500 dark:text-gray-400">No transaction data available</p>
                   <p className="text-sm text-gray-400 dark:text-gray-500 mt-2">Add some transactions to see your monthly trends</p>
                 </div>
@@ -466,6 +503,80 @@ export default function Dashboard() {
               showLimited={true}
             />
           </div>
+
+          <div className="mt-8 grid grid-cols-1 gap-6 xl:grid-cols-[.8fr_1fr_1.2fr]">
+            <div className="app-surface p-6 rounded-2xl">
+                <div className="flex items-center justify-between mb-5">
+                <div><p className="app-eyebrow">ACTIVITY CALENDAR</p><h3 className="app-display-heading text-2xl text-gray-900">{calendarMonth.toLocaleDateString(undefined, { month: 'long' })}</h3></div>
+                <div className="flex items-center gap-1"><button type="button" onClick={() => shiftCalendarMonth(-1)} className="app-calendar-button" aria-label="Previous month">‹</button><span className="px-1 text-sm text-[#718064]">{calendarMonth.getFullYear()}</span><button type="button" onClick={() => shiftCalendarMonth(1)} className="app-calendar-button" aria-label="Next month">›</button></div>
+              </div>
+              <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-semibold text-gray-400">
+                {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, index) => <span key={`${day}-${index}`} className="py-1">{day}</span>)}
+                {calendarDays.map((item, index) => item ? <span key={index} className={`relative grid h-8 place-items-center rounded-full text-xs ${item.isToday ? 'bg-[#143b2d] text-white' : 'text-gray-700'}`}>{item.day}{item.hasActivity && !item.isToday && <i className="absolute bottom-1 h-1 w-1 rounded-full bg-[#e7a761]" />}</span> : <span key={index} />)}
+              </div>
+              <div className="mt-5 flex items-center gap-2 text-xs text-gray-500"><span className="h-2 w-2 rounded-full bg-[#e7a761]" /> Days with transactions</div>
+            </div>
+            <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-xl p-6 rounded-2xl shadow-xl border border-white/20 dark:border-gray-700/50">
+              <div className="flex items-center justify-between mb-5">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Collaboration pulse</h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Activity across your projects</p>
+                </div>
+                <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-700 dark:bg-blue-900/40 dark:text-blue-200">{collaboration.projects.length} projects</span>
+              </div>
+              {collaborationChartData.length > 0 ? (
+                <ResponsiveContainer width="100%" height={220}>
+                  <BarChart data={collaborationChartData} layout="vertical" margin={{ left: 12, right: 12 }}>
+                    <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                    <XAxis type="number" allowDecimals={false} />
+                    <YAxis type="category" dataKey="name" width={92} tick={{ fontSize: 11 }} />
+                    <Tooltip />
+                    <Bar dataKey="count" fill="#0f766e" radius={[0, 5, 5, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <p className="py-12 text-center text-sm text-gray-500 dark:text-gray-400">Create a project or note to start tracking collaboration.</p>
+              )}
+            </div>
+
+            <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-xl p-6 rounded-2xl shadow-xl border border-white/20 dark:border-gray-700/50">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Recent project activity</h3>
+              <div className="mt-4 space-y-3">
+                {recentActivity.length === 0 ? <p className="text-sm text-gray-500 dark:text-gray-400">No project activity yet.</p> : recentActivity.map((item, index) => (
+                  <div key={`${item.date}-${item.activity}-${index}`} className="flex items-center justify-between border-b border-gray-100 py-2 last:border-0 dark:border-gray-700">
+                    <div><p className="text-sm font-medium capitalize text-gray-800 dark:text-gray-100">{item.activity}</p><p className="text-xs text-gray-500 dark:text-gray-400">{item.project}</p></div>
+                    <span className="text-xs text-gray-500 dark:text-gray-400">{item.date}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-8">
+            <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+              <div><p className="app-eyebrow">PROJECT LIFE / CONTENT</p><h2 className="app-display-heading text-3xl text-gray-900">Your collaboration desk</h2></div>
+              <a href="/workspace" className="app-primary rounded-full px-4 py-2 text-xs font-semibold shadow-sm">Open workspace <span aria-hidden="true">↗</span></a>
+            </div>
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-4 mb-6">
+              {[['Projects', collaboration.projects.length, '◈'], ['Notes', collaborationTotals.notes, '≡'], ['Uploads', collaborationTotals.files, '↑'], ['Members', collaborationTotals.members, '◌']].map(([label, value, icon]) => (
+                <div key={label} className="app-surface rounded-xl p-4"><div className="flex items-center justify-between text-xs text-gray-500"><span>{label}</span><span className="text-lg text-[#718064]">{icon}</span></div><p className="mt-2 text-2xl font-semibold text-[#143b2d]">{value}</p></div>
+              ))}
+            </div>
+            <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+              <div className="app-surface rounded-2xl p-5">
+                <div className="mb-4 flex items-center justify-between"><div><h3 className="text-lg font-semibold text-gray-900">Recent notes</h3><p className="text-xs text-gray-500">Edit and manage from Workspace</p></div><span className="rounded-full bg-[#e5eee1] px-3 py-1 text-xs font-semibold text-[#31543f]">{collaboration.notes.length} shown</span></div>
+                <div className="space-y-2">
+                  {collaboration.notes.length === 0 ? <p className="py-6 text-sm text-gray-500">No notes created yet.</p> : collaboration.notes.slice(0, 5).map((note) => <div key={note._id} className="flex items-center justify-between rounded-xl bg-[#f6f3eb] px-3 py-2"><div className="min-w-0"><p className="truncate text-sm font-semibold text-gray-800">{note.title || 'Untitled note'}</p><p className="text-xs text-gray-500">{note.project?.name || 'Project'} · {new Date(note.updatedAt || note.createdAt).toLocaleDateString()}</p></div><a href="/workspace" className="ml-3 text-xs font-semibold text-[#31543f] underline">Open</a></div>)}
+                </div>
+              </div>
+              <div className="app-surface rounded-2xl p-5">
+                <div className="mb-4 flex items-center justify-between"><div><h3 className="text-lg font-semibold text-gray-900">Upload history</h3><p className="text-xs text-gray-500">Preview or download project files</p></div><span className="rounded-full bg-[#f7e5d2] px-3 py-1 text-xs font-semibold text-[#5d3827]">{collaboration.files.length} shown</span></div>
+                <div className="space-y-2">
+                  {collaboration.files.length === 0 ? <p className="py-6 text-sm text-gray-500">No files uploaded yet.</p> : collaboration.files.slice(0, 5).map((file) => <div key={file._id} className="flex items-center justify-between rounded-xl bg-[#f6f3eb] px-3 py-2"><div className="min-w-0"><p className="truncate text-sm font-semibold text-gray-800">{file.originalName}</p><p className="text-xs text-gray-500">{file.project?.name || 'Project'} · {file.size ? `${(file.size / 1024).toFixed(1)} KB` : 'File'}</p></div><a href={getFileUrl(file.url)} download={file.originalName} target="_blank" rel="noreferrer" className="ml-3 text-xs font-semibold text-[#31543f] underline">Download</a></div>)}
+                </div>
+              </div>
+            </div>
+          </div>
         </>
       )}
 
@@ -476,7 +587,6 @@ export default function Dashboard() {
               <div id="transaction-form" className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm p-6 rounded-2xl shadow-xl border border-white/20 dark:border-gray-700/50 sticky top-6">
                 <div className="flex items-center mb-6">
                   <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-500 rounded-lg flex items-center justify-center mr-3">
-                    <span className="text-white text-sm">➕</span>
                   </div>
                   <h3 className="text-lg font-bold text-gray-900 dark:text-white">Add Transaction</h3>
                 </div>
@@ -505,9 +615,6 @@ export default function Dashboard() {
                 <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm p-6 rounded-2xl shadow-xl border border-white/20 dark:border-gray-700/50">
                   <div className="flex justify-between items-center">
                     <div className="flex items-center">
-                      <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-red-500 rounded-xl flex items-center justify-center mr-3">
-                        <span className="text-white text-lg">🎯</span>
-                      </div>
                       <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Budget Management</h2>
                     </div>
                     <button 
@@ -515,7 +622,7 @@ export default function Dashboard() {
                       data-action="create-budget"
                       className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 shadow-lg"
                     >
-                      ➕ Create Budget
+                      Create Budget
                     </button>
                   </div>
                 </div>
@@ -541,9 +648,6 @@ export default function Dashboard() {
                 <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm p-6 rounded-2xl shadow-xl border border-white/20 dark:border-gray-700/50">
                   <div className="flex justify-between items-center">
                     <div className="flex items-center">
-                      <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-500 rounded-xl flex items-center justify-center mr-3">
-                        <span className="text-white text-lg">💰</span>
-                      </div>
                       <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Savings Goals</h2>
                     </div>
                     <button 
@@ -551,7 +655,7 @@ export default function Dashboard() {
                       data-action="create-savings-goal"
                       className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 shadow-lg"
                     >
-                      🎯 Create Goal
+                      Create Goal
                     </button>
                   </div>
                 </div>
@@ -576,14 +680,14 @@ export default function Dashboard() {
               <>
                 <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm p-6 rounded-2xl shadow-xl border border-white/20 dark:border-gray-700/50">
                   <div className="flex items-center">
-                    <div className="w-10 h-10 bg-gradient-to-br from-yellow-500 to-orange-500 rounded-xl flex items-center justify-center mr-3">
-                      <span className="text-white text-lg">🔔</span>
-                    </div>
                     <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Alerts & Notifications</h2>
                   </div>
                 </div>
                 <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 dark:border-gray-700/50 overflow-hidden">
-                  <AlertsPanel alerts={alerts} onAlertsUpdated={fetchData} />
+                  <AlertsPanel
+                    alerts={alerts}
+                    onAlertsUpdated={(nextAlerts) => nextAlerts ? setAlerts(nextAlerts) : fetchData()}
+                  />
                 </div>
               </>
             ) : (

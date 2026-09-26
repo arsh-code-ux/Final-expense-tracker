@@ -70,17 +70,14 @@ export default function BudgetCard({ budget, transactions, onBudgetUpdated }) {
   return (
     <div className={`p-4 sm:p-6 rounded-2xl border-2 shadow-xl hover:shadow-2xl transition-all transform hover:-translate-y-1 ${getCardColor()}`}>
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 space-y-2 sm:space-y-0">
-        <h3 className="text-base sm:text-xl font-bold text-navy capitalize flex items-center">
-          <span className="bg-primary-100 p-2 rounded-lg mr-2 text-lg">💰</span>
-          {budget.category}
-        </h3>
+        <h3 className="text-base sm:text-xl font-bold text-navy capitalize">{budget.category}</h3>
         <div className="flex items-center space-x-3">
           <span className={`text-xs sm:text-sm font-bold px-3 py-1.5 rounded-full ${
             budget.period === 'monthly' 
               ? 'bg-primary-200 text-primary-800' 
               : 'bg-accent-200 text-accent-800'
           }`}>
-            {budget.period === 'monthly' ? '📅 Monthly' : '⏰ Weekly'}
+            {budget.period === 'monthly' ? 'Monthly' : 'Weekly'}
           </span>
           <button
             onClick={deleteBudget}

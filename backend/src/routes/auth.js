@@ -4,17 +4,22 @@ const User = require('../models/User');
 const auth = require('../middleware/auth');
 
 const router = express.Router();
+const jwtOptions = { expiresIn: process.env.JWT_EXPIRES_IN || '7d' };
 
 // Register (simple)
 router.post('/register', async (req, res) => {
   const { name, email, password } = req.body;
   try {
-    let user = await User.findOne({ email });
+    const normalizedEmail = String(email || '').trim().toLowerCase();
+    if (!String(name || '').trim() || !normalizedEmail || !password || String(password).length < 8) {
+      return res.status(400).json({ message: 'Name, email, and a password of at least 8 characters are required' });
+    }
+    let user = await User.findOne({ email: normalizedEmail });
     if (user) return res.status(400).json({ message: 'User already exists' });
-    user = new User({ name, email });
+    user = new User({ name: String(name).trim(), email: normalizedEmail });
     await user.setPassword(password);
     await user.save();
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET || 'fallback-secret');
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, jwtOptions);
     res.json({ token, user: { id: user._id, name: user.name, email: user.email } });
   } catch (err) {
     console.error(err);
@@ -24,13 +29,14 @@ router.post('/register', async (req, res) => {
 
 // Login
 router.post('/login', async (req, res) => {
-  const { email, password } = req.body;
+  const email = String(req.body.email || '').trim().toLowerCase();
+  const { password } = req.body;
   try {
     const user = await User.findOne({ email });
     if (!user) return res.status(400).json({ message: 'Invalid credentials' });
     const valid = await user.validatePassword(password);
     if (!valid) return res.status(400).json({ message: 'Invalid credentials' });
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET || 'fallback-secret');
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, jwtOptions);
     res.json({ token, user: { id: user._id, name: user.name, email: user.email } });
   } catch (err) {
     console.error(err);
@@ -50,7 +56,7 @@ router.get('/verify', auth, async (req, res) => {
 });
 
 // Debug endpoint to see all users and alerts
-router.get('/debug-data', async (req, res) => {
+router.get('/debug-data', auth, async (req, res) => {
   try {
     const Alert = require('../models/Alert');
     
@@ -79,7 +85,7 @@ router.get('/debug-data', async (req, res) => {
 });
 
 // Generate alerts for a specific user
-router.post('/generate-alerts/:userId', async (req, res) => {
+router.post('/generate-alerts/:userId', auth, async (req, res) => {
   try {
     const Alert = require('../models/Alert');
     const userId = req.params.userId;

@@ -120,10 +120,7 @@ export default function SavingsGoalCard({ goal, onSavingsUpdated, currentBalance
     <div className={`p-4 sm:p-6 rounded-2xl border-2 shadow-xl hover:shadow-2xl transition-all transform hover:-translate-y-1 ${getCardColor()}`}>
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between mb-4 space-y-2 sm:space-y-0">
         <div className="min-w-0 flex-1">
-          <h3 className="text-base sm:text-xl font-bold text-navy break-words flex items-center">
-            <span className="bg-primary-100 p-2 rounded-lg mr-2 text-lg">🎯</span>
-            {goal.title}
-          </h3>
+          <h3 className="text-base sm:text-xl font-bold text-navy break-words">{goal.title}</h3>
           {goal.description && (
             <p className="text-xs sm:text-sm text-primary-700 mt-2 break-words font-medium">{goal.description}</p>
           )}
@@ -176,7 +173,7 @@ export default function SavingsGoalCard({ goal, onSavingsUpdated, currentBalance
         {goal.deadline && (
           <div className="flex justify-between text-xs sm:text-sm">
             <span className="text-primary-700 font-semibold">Target Date</span>
-            <span className="font-bold text-navy text-right">📅 {formatDate(goal.deadline)}</span>
+            <span className="font-bold text-navy text-right">{formatDate(goal.deadline)}</span>
           </div>
         )}
         
@@ -200,7 +197,7 @@ export default function SavingsGoalCard({ goal, onSavingsUpdated, currentBalance
             {daysRemaining > 0 ? (
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between text-xs space-y-1 sm:space-y-0 bg-primary-100 p-3 rounded-xl">
                 <span className="text-primary-800 font-bold">
-                  ⏰ {daysRemaining} days remaining
+                  {daysRemaining} days remaining
                 </span>
                 {remaining > 0 && (
                   <span className="text-primary-700 font-semibold break-all">
@@ -210,10 +207,7 @@ export default function SavingsGoalCard({ goal, onSavingsUpdated, currentBalance
               </div>
             ) : (
               <div className="p-3 bg-gradient-to-r from-danger-100 to-danger-200 border-2 border-danger-300 rounded-xl">
-                <p className="text-xs text-danger-800 font-bold flex items-center">
-                  <span className="text-lg mr-2">⚠️</span>
-                  Target date has passed
-                </p>
+                <p className="text-xs text-danger-800 font-bold">Target date has passed</p>
               </div>
             )}
           </div>
@@ -221,19 +215,13 @@ export default function SavingsGoalCard({ goal, onSavingsUpdated, currentBalance
         
         {isCompleted && (
           <div className="mt-4 p-3 bg-gradient-to-r from-success-100 to-success-200 border-2 border-success-300 rounded-xl">
-            <p className="text-xs text-success-800 font-bold break-words flex items-center">
-              <span className="text-lg mr-2">🎉</span>
-              Goal achieved! Great job saving!
-            </p>
+            <p className="text-xs text-success-800 font-bold break-words">Goal achieved! Great job saving!</p>
           </div>
         )}
         
         {progressPercentage >= 90 && !isCompleted && (
           <div className="mt-4 p-3 bg-gradient-to-r from-primary-100 to-primary-200 border-2 border-primary-300 rounded-xl">
-            <p className="text-xs text-primary-800 font-bold break-words flex items-center">
-              <span className="text-lg mr-2">🎯</span>
-              You're almost there! Just {formatAmount(remaining)} to go!
-            </p>
+            <p className="text-xs text-primary-800 font-bold break-words">You're almost there! Just {formatAmount(remaining)} to go!</p>
           </div>
         )}
       </div>

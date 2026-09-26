@@ -3,163 +3,159 @@ const auth = require('../middleware/auth');
 const Transaction = require('../models/Transaction');
 const User = require('../models/User');
 const mongoose = require('mongoose');
-const { formatAmount, getCurrencySymbol } = require('../utils/currency');
+const { formatAmount } = require('../utils/currency');
 
 const router = express.Router();
 
-let client = null;
-if (process.env.OPENAI_API_KEY && !process.env.OPENAI_API_KEY.includes('placeholder')) {
-  const { OpenAI } = require('openai');
-  client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-}
-
-// Create a demo user ObjectId that stays consistent
 const demoUserId = new mongoose.Types.ObjectId('507f1f77bcf86cd799439011');
 
-// Simple chat endpoint: accepts { message }
-// It will fetch user's recent transactions and pass a small context to the LLM.
+function sanitizeAssistantText(text = '') {
+  if (!text || typeof text !== 'string') return '';
+
+  const cleaned = text
+    .replace(/```[\s\S]*?```/g, '')
+    .replace(/`/g, '')
+    .replace(/\*\*(.*?)\*\*/g, '$1')
+    .replace(/__(.*?)__/g, '$1')
+    .replace(/\*+(?!\s)/g, '')
+    .replace(/#{1,6}\s*/g, '')
+    .replace(/^\s*[-*+]\s+/gm, '')
+    .replace(/^\s*\d+\.\s+/gm, '')
+    .replace(/^\s*[|•▪️]\s*/gm, '')
+    .replace(/^\s*---+\s*$/gm, '')
+    .replace(/\|/g, ' ')
+    .replace(/\r\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .split('\n')
+    .map((line) => line.trim())
+    .join('\n')
+    .trim();
+
+  return cleaned.replace(/\n{3,}/g, '\n\n');
+}
+
+async function generateGroqFinanceReply(message, summary, userCurrency) {
+  const groqApiKey = process.env.GROQ_API_KEY;
+  if (!groqApiKey) {
+    throw new Error('GROQ_API_KEY is missing');
+  }
+
+  const modelCandidates = ['groq/compound', 'openai/gpt-oss-20b', 'openai/gpt-oss-120b'];
+
+  for (const model of modelCandidates) {
+    try {
+      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${groqApiKey}`
+        },
+        body: JSON.stringify({
+          model,
+          messages: [
+            {
+              role: 'system',
+              content: `You are TrackExpense AI, a warm, practical assistant who helps with personal finance and everyday life questions. Use the user's financial data when relevant, but answer general questions naturally and helpfully too. Be friendly, specific, and supportive. If the question is about money, tailor advice to the user's transaction summary and current balance. If the question is general, provide a useful, direct answer without being robotic. Keep responses clear, realistic, and action-oriented. Write in plain prose with short paragraphs. Avoid markdown headings, bold markers, bullet stars, code fences, separators like --- or pipes, and unnecessary list formatting. If you use a list, keep it very short and simple without markdown symbols.`
+            },
+            {
+              role: 'user',
+              content: `User question: ${message}\n\nUser financial summary:\n${summary}\n\nUser preferred currency: ${userCurrency}\n\nAnswer in a helpful, natural way. If the question is financial, use the summary. If it is general, still be useful and practical. Keep it concise but complete. Use plain language, short paragraphs, and no markdown noise.`
+            }
+          ],
+          temperature: 0.8,
+          max_tokens: 600
+        })
+      });
+
+      if (!response.ok) {
+        const body = await response.text();
+        if (response.status === 404) {
+          console.warn(`Groq model ${model} unavailable; trying next model. Details: ${body}`);
+          continue;
+        }
+        throw new Error(`Groq API error: ${response.status} ${body}`);
+      }
+
+      const data = await response.json();
+      const content = data.choices?.[0]?.message?.content;
+      if (content) return sanitizeAssistantText(content);
+    } catch (error) {
+      if (model === modelCandidates[modelCandidates.length - 1]) {
+        throw error;
+      }
+    }
+  }
+
+  throw new Error('Groq finance model could not generate a response');
+}
+
+function buildTransactionSummary(transactions, userCurrency) {
+  if (!transactions || transactions.length === 0) {
+    return `No transactions yet. The user has not added any financial activity yet. Encourage them to add expenses and income to get tailored insights.`;
+  }
+
+  const expenses = transactions.filter((t) => t.type === 'expense');
+  const incomes = transactions.filter((t) => t.type === 'income');
+  const totalExpense = expenses.reduce((sum, t) => sum + Number(t.amount || 0), 0);
+  const totalIncome = incomes.reduce((sum, t) => sum + Number(t.amount || 0), 0);
+  const netBalance = totalIncome - totalExpense;
+
+  const categoryMap = {};
+  expenses.forEach((tx) => {
+    const category = tx.category || 'Uncategorized';
+    categoryMap[category] = (categoryMap[category] || 0) + Number(tx.amount || 0);
+  });
+
+  const topCategories = Object.entries(categoryMap)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 4)
+    .map(([category, amount]) => `${category}: ${formatAmount(amount, userCurrency)}`)
+    .join('; ');
+
+  const recent = transactions.slice(0, 8).map((t) => `${t.type} ${t.category} ${formatAmount(Number(t.amount || 0), userCurrency)} on ${new Date(t.date).toISOString().slice(0, 10)}`).join(' | ');
+
+  return `Income total: ${formatAmount(totalIncome, userCurrency)}. Expense total: ${formatAmount(totalExpense, userCurrency)}. Net balance: ${formatAmount(netBalance, userCurrency)}. Top categories: ${topCategories || 'None yet'}. Recent activity: ${recent}.`;
+}
+
 router.post('/', auth, async (req, res) => {
   try {
     const { message } = req.body;
-    
-    // Get user ID (authenticated user or demo user)
+    if (!message || !String(message).trim()) {
+      return res.status(400).json({ message: 'Please enter a valid financial question.' });
+    }
+
     const userId = req.user ? req.user._id : demoUserId;
-    
-    // Get user currency preference
+
     let userCurrency = 'USD';
     if (req.user) {
-      try {
-        const user = await User.findById(req.user._id).select('preferences');
-        userCurrency = user?.preferences?.currency || 'USD';
-      } catch (error) {
-        // Silently handle error and use default currency
-      }
+      const user = await User.findById(req.user._id).select('preferences');
+      userCurrency = user?.preferences?.currency || 'USD';
     }
-    
-    // Check if the question is finance-related
-    const financeKeywords = [
-      'money', 'spend', 'expense', 'income', 'save', 'saving', 'budget', 'financial', 'finance',
-      'transaction', 'cost', 'price', 'pay', 'payment', 'cash', 'bank', 'investment', 'invest',
-      'profit', 'loss', 'debt', 'credit', 'loan', 'interest', 'tax', 'salary', 'wage',
-      'purchase', 'buy', 'sell', 'revenue', 'earnings', 'balance', 'account', 'fund',
-      'insurance', 'pension', 'retirement', 'mortgage', 'rent', 'bill', 'category',
-      'rupee', 'rupees', '₹', 'dollar', 'currency', 'amount', 'total', 'sum'
-    ];
-    
-    const lowerMessage = message.toLowerCase();
-    const isFinanceRelated = financeKeywords.some(keyword => lowerMessage.includes(keyword));
-    
-    if (!isFinanceRelated) {
-      return res.json({
-        reply: "I'm sorry, but I'm specifically designed to help with financial matters like expenses, budgets, savings, and money management. Please ask me questions related to your finances, spending patterns, or financial advice. For example: 'How much did I spend this month?' or 'Give me a savings tip.'"
-      });
-    }
-    
-    if (!client) {
-      // Provide comprehensive financial responses even without OpenAI API
-      const recent = await Transaction.find({ userId }).sort({ date: -1 }).limit(20);
-      const summary = summarizeTransactions(recent);
-      
-      let reply;
-      
-      // General spending questions
-      if (lowerMessage.includes('spend') || lowerMessage.includes('expense')) {
-        const totalExpenses = recent.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
-        const expenseCount = recent.filter(t => t.type === 'expense').length;
-        reply = `You've spent ${formatAmount(totalExpenses, userCurrency)} across ${expenseCount} transactions. ${summary}`;
-      } 
-      // Income questions
-      else if (lowerMessage.includes('income') || lowerMessage.includes('earn')) {
-        const totalIncome = recent.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
-        const incomeCount = recent.filter(t => t.type === 'income').length;
-        reply = `Your total income is ${formatAmount(totalIncome, userCurrency)} from ${incomeCount} transactions. ${summary}`;
-      } 
-      // Budget and savings questions
-      else if (lowerMessage.includes('budget') || lowerMessage.includes('save')) {
-        const totalIncome = recent.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
-        const totalExpenses = recent.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
-        const savings = totalIncome - totalExpenses;
-        reply = `Your current balance is ${formatAmount(savings, userCurrency)}. ${savings > 0 ? 'Great job saving money!' : 'Consider reducing expenses to improve your savings.'} Try the 50/30/20 rule: 50% needs, 30% wants, 20% savings.`;
-      }
-      // Category questions
-      else if (lowerMessage.includes('category') || lowerMessage.includes('categories')) {
-        const categories = {};
-        recent.filter(t => t.type === 'expense').forEach(t => {
-          categories[t.category] = (categories[t.category] || 0) + t.amount;
-        });
-        const sortedCategories = Object.entries(categories).sort((a, b) => b[1] - a[1]);
-        if (sortedCategories.length > 0) {
-          const topCategory = sortedCategories[0];
-          reply = `Your biggest expense category is ${topCategory[0]} with ${formatAmount(topCategory[1], userCurrency)} spent. Other categories: ${sortedCategories.slice(1, 3).map(([cat, amt]) => `${cat} (${formatAmount(amt, userCurrency)})`).join(', ')}.`;
-        } else {
-          reply = 'No expense categories found yet. Start adding transactions to see your spending patterns!';
-        }
-      }
-      // Financial tips and advice
-      else if (lowerMessage.includes('tip') || lowerMessage.includes('advice') || lowerMessage.includes('help')) {
-        const tips = [
-          "Track every expense, no matter how small - it adds up!",
-          "Use the 50/30/20 rule: 50% needs, 30% wants, 20% savings.",
-          "Set up automatic transfers to savings to build the habit.",
-          "Review your subscriptions monthly and cancel unused ones.",
-          "Cook at home more often to reduce food expenses.",
-          "Use the 24-hour rule: wait a day before making non-essential purchases.",
-          "Build an emergency fund covering 3-6 months of expenses."
-        ];
-        reply = tips[Math.floor(Math.random() * tips.length)];
-      }
-      // Balance and total questions
-      else if (lowerMessage.includes('balance') || lowerMessage.includes('total') || lowerMessage.includes('money')) {
-        const totalIncome = recent.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
-        const totalExpenses = recent.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
-        const balance = totalIncome - totalExpenses;
-        reply = `Your financial summary: Income: ${formatAmount(totalIncome, userCurrency)}, Expenses: ${formatAmount(totalExpenses, userCurrency)}, Net Balance: ${formatAmount(balance, userCurrency)}. ${balance > 0 ? '✅ You\'re in the positive!' : '⚠️ Consider reducing expenses.'}`;
-      }
-      // Default financial response
-      else {
-        reply = `I'm here to help with your finances! I can analyze your spending patterns, provide budgeting advice, and answer questions about your transactions. Try asking: "How much did I spend on food?" or "Give me a savings tip!" Your recent activity: ${summary || 'No transactions yet.'}`;
-      }
-      
+
+    const recentTransactions = await Transaction.find({ userId }).sort({ date: -1 }).limit(30);
+    const summary = buildTransactionSummary(recentTransactions, userCurrency);
+
+    try {
+      const reply = await generateGroqFinanceReply(message, summary, userCurrency);
       return res.json({ reply });
+    } catch (groqError) {
+      const expenseTotal = recentTransactions.filter((t) => t.type === 'expense').reduce((sum, t) => sum + Number(t.amount || 0), 0);
+      const incomeTotal = recentTransactions.filter((t) => t.type === 'income').reduce((sum, t) => sum + Number(t.amount || 0), 0);
+      const balance = incomeTotal - expenseTotal;
+
+      const fallbackReply = recentTransactions.length
+        ? `I can still help here. Based on your recent data, your net balance is ${formatAmount(balance, userCurrency)}, with ${formatAmount(expenseTotal, userCurrency)} spent and ${formatAmount(incomeTotal, userCurrency)} earned. For your question, the best first step is to look at the biggest expense category and set a clear next action, such as reducing one wasteful category or increasing your savings target for the month.`
+        : `I can help with this. Since you have not added transaction data yet, I would still suggest starting with a clear goal, a simple daily routine, and a realistic spending plan. If you want, add your expenses and income and I can turn that into a better budget or savings plan.`;
+
+      return res.json({ reply: fallbackReply });
     }
-
-    // If OpenAI is available, use it for more sophisticated responses
-    const recent = await Transaction.find({ userId }).sort({ date: -1 }).limit(30);
-    const summary = summarizeTransactions(recent);
-
-    const prompt = `You are a helpful personal finance assistant. Only answer questions related to finance, money, budgets, expenses, savings, investments, and financial planning. If the user asks about non-financial topics, politely decline and redirect them to ask about financial matters.
-
-User's financial data: ${summary}
-
-User question: ${message}
-
-Provide helpful, accurate financial advice based on their data.`;
-
-    const response = await client.chat.completions.create({
-      model: 'gpt-3.5-turbo',
-      messages: [{ role: 'user', content: prompt }],
-      max_tokens: 500
-    });
-
-    const text = response.choices[0]?.message?.content || 'Sorry, no response available.';
-    res.json({ reply: text });
   } catch (err) {
     console.error('Chat error:', err);
-    res.json({ reply: 'Sorry, I encountered an error while processing your financial query. Please try again.' });
+    res.json({
+      reply: 'I hit a small issue while preparing your financial answer. Please try again and I’ll help you with your spending, budget, or savings question.'
+    });
   }
 });
 
-function summarizeTransactions(txs) {
-  if (!txs || txs.length === 0) return 'No transactions.';
-  const totalsByCategory = {};
-  let total = 0;
-  txs.forEach(t => {
-    const c = t.category || 'Uncategorized';
-    totalsByCategory[c] = (totalsByCategory[c] || 0) + t.amount * (t.type === 'expense' ? 1 : -1);
-    total += t.type === 'expense' ? t.amount : -t.amount;
-  });
-  const lines = Object.entries(totalsByCategory).map(([k,v]) => `${k}: ${v}`);
-  return `Total recent balance: ${total}. By category: ${lines.join('; ')}`;
-}
-
 module.exports = router;
+module.exports.sanitizeAssistantText = sanitizeAssistantText;

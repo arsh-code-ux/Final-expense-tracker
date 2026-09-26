@@ -118,16 +118,16 @@ export default function ChatPage(){
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+    <div className="app-page">
       <div className="px-4 py-6 max-w-4xl mx-auto">
         {/* Header */}
         <div className="mb-8 text-center">
-          <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl p-8 shadow-xl border border-white/20 dark:border-gray-700/50">
+          <div className="app-surface rounded-2xl p-8">
             <div className="flex items-center justify-center mb-4">
               <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-500 rounded-2xl flex items-center justify-center mr-4">
                 <span className="text-white text-2xl">🤖</span>
               </div>
-              <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent">
+              <h1 className="app-display-heading text-4xl text-slate-900">
                 AI Finance Assistant
               </h1>
             </div>
@@ -139,14 +139,14 @@ export default function ChatPage(){
         </div>
 
         {/* Chat Container */}
-        <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 dark:border-gray-700/50 overflow-hidden">
+        <div className="app-surface rounded-2xl overflow-hidden">
           {/* Chat Messages */}
           <div className="h-96 overflow-y-auto p-6 space-y-4 bg-gradient-to-b from-gray-50/50 to-white/50 dark:from-gray-800/50 dark:to-gray-900/50">
             {messages.map((m, i)=>(
               <div key={i} className={`flex ${m.from === 'user' ? 'justify-end' : 'justify-start'}`}>
                 <div className={`max-w-xs lg:max-w-md px-4 py-3 rounded-2xl shadow-lg transform hover:scale-105 transition-all duration-300 ${
                   m.from === 'user' 
-                    ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white' 
+                    ? 'bg-[#143b2d] text-white' 
                     : 'bg-white/90 dark:bg-gray-700/90 backdrop-blur-sm text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-gray-600'
                 }`}>
                   {m.from === 'bot' && (
@@ -157,7 +157,7 @@ export default function ChatPage(){
                       <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">AI Assistant</span>
                     </div>
                   )}
-                  <p className="text-sm leading-relaxed">{m.text}</p>
+                  <p className="text-sm leading-relaxed whitespace-pre-line">{m.text}</p>
                   {m.from === 'user' && (
                     <div className="text-xs opacity-75 text-right mt-1">You</div>
                   )}
@@ -167,11 +167,11 @@ export default function ChatPage(){
           
             {loading && (
               <div className="flex justify-start">
-                <div className="bg-white/90 dark:bg-gray-700/90 backdrop-blur-sm border border-gray-200 dark:border-gray-600 rounded-2xl px-4 py-3 shadow-lg">
+                <div className="bg-[#f0eadc] border border-[#dedfd4] rounded-2xl px-4 py-3 shadow-sm">
                   <div className="flex items-center space-x-2">
-                    <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce"></div>
-                    <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
-                    <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
+                    <div className="w-2 h-2 bg-[#718064] rounded-full animate-bounce"></div>
+                    <div className="w-2 h-2 bg-[#718064] rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
+                    <div className="w-2 h-2 bg-[#718064] rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
                     <span className="text-sm text-gray-600 dark:text-gray-300 ml-2">AI is thinking...</span>
                   </div>
                 </div>
@@ -196,7 +196,7 @@ export default function ChatPage(){
               className={`px-6 py-3 rounded-xl font-semibold transition-all duration-300 shadow-lg transform hover:scale-105 ${
                 loading || !input.trim()
                   ? 'bg-gray-300 dark:bg-gray-600 cursor-not-allowed text-gray-500'
-                  : 'bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white'
+                  : 'bg-[#143b2d] hover:bg-[#20533d] text-white'
               }`}
             >
               {loading ? (

@@ -2,6 +2,7 @@ require('dotenv').config({ path: require('path').join(__dirname, '../.env') });
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const { MongoMemoryServer } = require('mongodb-memory-server');
 
 // Enhanced logging system
 const log = {
@@ -10,6 +11,8 @@ const log = {
   warn: (msg) => console.warn(`[WARN] ${new Date().toISOString()} - ${msg}`),
   success: (msg) => console.log(`[SUCCESS] ${new Date().toISOString()} - ${msg}`)
 };
+
+let memoryServer = null;
 
 // Environment validation
 function validateEnvironment() {
@@ -49,8 +52,25 @@ async function connectDatabase() {
       log.error(`Database connection attempt ${attempt} failed: ${error.message}`);
       
       if (attempt === maxRetries) {
-        log.error('❌ All database connection attempts failed');
-        process.exit(1);
+        log.warn('Falling back to an in-memory MongoDB instance so the backend can still start locally');
+
+        try {
+          memoryServer = await MongoMemoryServer.create();
+          const memoryUri = memoryServer.getUri('track-expense');
+
+          await mongoose.connect(memoryUri, {
+            serverSelectionTimeoutMS: timeout,
+            maxPoolSize: 10
+          });
+
+          process.env.MONGODB_URI = memoryUri;
+          log.success('✅ Connected to in-memory MongoDB successfully');
+          return;
+        } catch (fallbackError) {
+          log.error(`❌ In-memory MongoDB fallback failed: ${fallbackError.message}`);
+          log.error('❌ All database connection attempts failed');
+          process.exit(1);
+        }
       }
       
       // Wait before retry (exponential backoff)
@@ -89,7 +109,13 @@ async function startServer() {
     const savingsGoalRoutes = require('./routes/savingsGoals');
     const alertRoutes = require('./routes/alerts');
     const chatRoutes = require('./routes/chat');
+    const projectRoutes = require('./routes/projects');
+    const aiRoutes = require('./routes/ai');
+    const geminiRoutes = require('./routes/gemini');
+    const filesRoutes = require('./routes/files');
+    const notesRoutes = require('./routes/notes');
     const preferencesRoutes = require('./routes/preferences');
+    const analyticsRoutes = require('./routes/analytics');
     
     // Create Express app
     const app = express();
@@ -114,8 +140,8 @@ async function startServer() {
         // Allow requests with no origin (like mobile apps or Postman)
         if (!origin) return callback(null, true);
         
-        // Check if the origin is in allowed list
-        if (allowedOrigins.indexOf(origin) !== -1) {
+        // Allow local Vite development servers regardless of the selected port.
+        if (origin.match(/^https?:\/\/localhost:\d+$/) || allowedOrigins.indexOf(origin) !== -1) {
           return callback(null, true);
         }
         
@@ -161,7 +187,9 @@ async function startServer() {
         uptime: process.uptime(),
         environment: process.env.NODE_ENV,
         version: process.env.APP_VERSION || '1.0.0',
-        database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
+        database: mongoose.connection.readyState === 1
+          ? (memoryServer ? 'connected-memory' : 'connected')
+          : 'disconnected',
         memory: process.memoryUsage(),
         pid: process.pid
       };
@@ -176,7 +204,15 @@ async function startServer() {
     app.use('/api/savings-goals', savingsGoalRoutes);
     app.use('/api/alerts', alertRoutes);
     app.use('/api/chat', chatRoutes);
+    app.use('/api/projects', projectRoutes);
+    app.use('/api/ai', aiRoutes);
+    app.use('/api/gemini', geminiRoutes);
+    app.use('/api/files', filesRoutes);
+    // Serve uploaded files
+    app.use('/uploads', express.static(require('path').join(__dirname, '..', 'uploads')));
+    app.use('/api/notes', notesRoutes);
     app.use('/api/preferences', preferencesRoutes);
+    app.use('/api/analytics', analyticsRoutes);
     
     // Global error handling middleware
     app.use((err, req, res, next) => {
@@ -243,6 +279,10 @@ async function startServer() {
 
         // Close mongoose connection (no callback in newer mongoose)
         await mongoose.connection.close();
+
+        if (memoryServer) {
+          await memoryServer.stop();
+        }
 
         log.success('✅ Graceful shutdown completed');
         process.exit(0);

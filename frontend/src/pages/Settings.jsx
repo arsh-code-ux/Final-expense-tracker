@@ -213,9 +213,9 @@ export default function Settings() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-900 dark:via-blue-900/20 dark:to-purple-900/20 p-4 transition-colors duration-300">
+    <div className="app-page p-4 transition-colors duration-300">
       {/* Animated Background */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+      <div className="hidden fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-40 -right-40 w-80 h-80 bg-purple-300 rounded-full mix-blend-multiply filter blur-xl opacity-70 dark:opacity-30 animate-blob"></div>
         <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-yellow-300 rounded-full mix-blend-multiply filter blur-xl opacity-70 dark:opacity-30 animate-blob animation-delay-2000"></div>
         <div className="absolute top-40 left-40 w-80 h-80 bg-pink-300 rounded-full mix-blend-multiply filter blur-xl opacity-70 dark:opacity-30 animate-blob animation-delay-4000"></div>
@@ -224,7 +224,7 @@ export default function Settings() {
       <div className="relative z-10 max-w-4xl mx-auto">
         {/* Header */}
         <div className="text-center mb-8">
-          <h1 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-4">
+          <h1 className="app-display-heading text-4xl md:text-5xl text-gray-900 dark:text-white mb-4">
             ⚙️ Settings
           </h1>
           <p className="text-lg text-gray-600 dark:text-gray-300">
@@ -236,7 +236,7 @@ export default function Settings() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           
           {/* Currency Settings */}
-          <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm p-6 rounded-2xl shadow-xl border border-white/20 dark:border-gray-700/50">
+          <div className="app-surface p-6 rounded-2xl">
             <div className="flex items-center mb-6">
               <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-500 rounded-xl flex items-center justify-center mr-4">
                 <span className="text-white text-xl">💰</span>
@@ -280,7 +280,7 @@ export default function Settings() {
           </div>
 
           {/* Appearance Settings */}
-          <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm p-6 rounded-2xl shadow-xl border border-white/20 dark:border-gray-700/50">
+          <div className="app-surface p-6 rounded-2xl">
             <div className="flex items-center mb-6">
               <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center mr-4">
                 <span className="text-white text-xl">{isDark ? '🌙' : '☀️'}</span>
@@ -315,7 +315,7 @@ export default function Settings() {
 
           {/* Account Information */}
           {isAuthenticated && (
-            <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm p-6 rounded-2xl shadow-xl border border-white/20 dark:border-gray-700/50">
+            <div className="app-surface p-6 rounded-2xl">
               <div className="flex items-center mb-6">
                 <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-xl flex items-center justify-center mr-4">
                   <span className="text-white text-xl">👤</span>
@@ -340,7 +340,7 @@ export default function Settings() {
           )}
 
           {/* Export/Import Settings */}
-          <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm p-6 rounded-2xl shadow-xl border border-white/20 dark:border-gray-700/50">
+          <div className="app-surface p-6 rounded-2xl">
             <div className="flex items-center mb-6">
               <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-red-500 rounded-xl flex items-center justify-center mr-4">
                 <span className="text-white text-xl">📊</span>

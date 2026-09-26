@@ -48,7 +48,6 @@ export default function NetworkErrorFallback({ error, onRetry, isRetrying = fals
 
         <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
           <div className="flex items-start">
-            <div className="text-blue-500 mr-3">💡</div>
             <div className="text-left">
               <h4 className="text-sm font-medium text-blue-800 dark:text-blue-300 mb-1">
                 Deployment Tip
