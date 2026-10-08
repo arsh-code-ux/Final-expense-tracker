@@ -6,6 +6,7 @@
   "license": "MIT",
   "scripts": {
     "dev": "nodemon src/index.js",
+    "build": "node -e \"console.log('No backend build step required')\"",
     "start": "node src/index.js",
     "prod": "NODE_ENV=production node src/index.js",
     "test": "node --test"
