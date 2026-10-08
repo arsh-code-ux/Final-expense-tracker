@@ -196,6 +196,54 @@ async function startServer() {
       
       res.json(healthData);
     });
+
+    // Root landing page for browser visits to the service URL
+    app.get('/', (req, res) => {
+      res.type('html').send(`
+        <!doctype html>
+        <html lang="en">
+          <head>
+            <meta charset="utf-8" />
+            <meta name="viewport" content="width=device-width, initial-scale=1" />
+            <title>Track Expense API</title>
+            <style>
+              body {
+                font-family: Arial, sans-serif;
+                margin: 0;
+                min-height: 100vh;
+                display: grid;
+                place-items: center;
+                background: linear-gradient(135deg, #f8fafc, #e2e8f0);
+                color: #0f172a;
+              }
+              .card {
+                background: white;
+                border: 1px solid #e2e8f0;
+                border-radius: 16px;
+                padding: 32px;
+                max-width: 560px;
+                box-shadow: 0 20px 60px rgba(15, 23, 42, 0.08);
+              }
+              h1 { margin-top: 0; }
+              a { color: #2563eb; }
+              code {
+                background: #f1f5f9;
+                padding: 2px 6px;
+                border-radius: 6px;
+              }
+            </style>
+          </head>
+          <body>
+            <div class="card">
+              <h1>Track Expense backend is running</h1>
+              <p>This service exposes the API for the Track Expense app.</p>
+              <p>Health check: <a href="/health">/health</a></p>
+              <p>API base: <code>/api</code></p>
+            </div>
+          </body>
+        </html>
+      `);
+    });
     
     // API routes
     app.use('/api/auth', authRoutes);
