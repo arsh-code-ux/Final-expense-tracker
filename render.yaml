@@ -1,7 +1,7 @@
 services:
   - type: web
     name: track-expense-backend
-    env: node
+    runtime: node
     rootDir: backend
     plan: free
     buildCommand: npm install
@@ -10,14 +10,10 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
-      - key: PORT
-        value: 10000
       - key: MONGODB_URI
         sync: false
       - key: JWT_SECRET
         sync: false
-      - key: FRONTEND_URL
-        value: https://track-expense-frontend.onrender.com
       - key: APP_NAME
         value: TrackExpense
       - key: APP_VERSION
@@ -37,7 +33,10 @@ services:
     staticPublishPath: dist
     envVars:
       - key: VITE_API_URL
-        value: https://track-expense-backend.onrender.com
+        fromService:
+          type: web
+          name: track-expense-backend
+          property: host
       - key: VITE_APP_NAME
         value: Track Expense
       - key: VITE_APP_VERSION

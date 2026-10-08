@@ -148,7 +148,8 @@ async function startServer() {
         // Check if origin matches patterns
         if (origin.match(/\.netlify\.app$/) || 
             origin.match(/\.vercel\.app$/) || 
-            origin.match(/\.railway\.app$/)) {
+            origin.match(/\.railway\.app$/) ||
+            origin.match(/\.onrender\.com$/)) {
           return callback(null, true);
         }
         
